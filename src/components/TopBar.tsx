@@ -1,5 +1,9 @@
-import { Box, Download, RotateCcw, Grid3x3, Axis3D, MessageSquare, LogOut } from 'lucide-react';
+import {
+  Box, Download, Grid3x3, Axis3D, MessageSquare, LogOut,
+  Ruler, Move, RotateCw, Maximize, MousePointer, Undo2,
+} from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore.ts';
+import type { EditorMode } from '../types/index.ts';
 
 interface TopBarProps {
   onExport3MF: () => void;
@@ -9,15 +13,26 @@ interface TopBarProps {
 export function TopBar({ onExport3MF, onExportSTL }: TopBarProps) {
   const {
     viewMode, setViewMode,
+    editorMode, setEditorMode,
     showGrid, toggleGrid,
     showAxes, toggleAxes,
-    autoRotate, toggleAutoRotate,
+    showRuler, toggleRuler,
     showChat, toggleChat,
     modelCode,
     undoModel,
     modelHistory,
     setApiKey,
+    setSelectedObjectId,
   } = useAppStore();
+
+  const handleEditorMode = (mode: EditorMode) => {
+    if (editorMode === mode) {
+      setEditorMode('view');
+      setSelectedObjectId(null);
+    } else {
+      setEditorMode(mode);
+    }
+  };
 
   return (
     <header className="h-12 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between px-4 shrink-0">
@@ -44,16 +59,26 @@ export function TopBar({ onExport3MF, onExportSTL }: TopBarProps) {
           ))}
         </div>
 
+        <div className="w-px h-6 bg-[#30363d] mx-1" />
+
+        {/* Editor tools */}
+        <ToolButton icon={MousePointer} active={editorMode === 'view'} onClick={() => handleEditorMode('view')} title="View (Orbit)" />
+        <ToolButton icon={Move} active={editorMode === 'move'} onClick={() => handleEditorMode('move')} title="Move (G)" disabled={!modelCode} />
+        <ToolButton icon={RotateCw} active={editorMode === 'rotate'} onClick={() => handleEditorMode('rotate')} title="Rotate (R)" disabled={!modelCode} />
+        <ToolButton icon={Maximize} active={editorMode === 'scale'} onClick={() => handleEditorMode('scale')} title="Scale (S)" disabled={!modelCode} />
+
+        <div className="w-px h-6 bg-[#30363d] mx-1" />
+
         {/* Scene toggles */}
         <ToolButton icon={Grid3x3} active={showGrid} onClick={toggleGrid} title="Grid" />
         <ToolButton icon={Axis3D} active={showAxes} onClick={toggleAxes} title="Axes" />
-        <ToolButton icon={RotateCcw} active={autoRotate} onClick={toggleAutoRotate} title="Auto Rotate" />
+        <ToolButton icon={Ruler} active={showRuler} onClick={toggleRuler} title="Ruler" />
 
-        <div className="w-px h-6 bg-[#30363d] mx-2" />
+        <div className="w-px h-6 bg-[#30363d] mx-1" />
 
         {/* Undo */}
         <ToolButton
-          icon={RotateCcw}
+          icon={Undo2}
           active={false}
           onClick={undoModel}
           title="Undo"
@@ -63,7 +88,7 @@ export function TopBar({ onExport3MF, onExportSTL }: TopBarProps) {
         {/* Chat toggle */}
         <ToolButton icon={MessageSquare} active={showChat} onClick={toggleChat} title="Chat" />
 
-        <div className="w-px h-6 bg-[#30363d] mx-2" />
+        <div className="w-px h-6 bg-[#30363d] mx-1" />
 
         {/* Export */}
         {modelCode && (
@@ -85,7 +110,7 @@ export function TopBar({ onExport3MF, onExportSTL }: TopBarProps) {
           </div>
         )}
 
-        <div className="w-px h-6 bg-[#30363d] mx-2" />
+        <div className="w-px h-6 bg-[#30363d] mx-1" />
 
         <button
           onClick={() => setApiKey('')}

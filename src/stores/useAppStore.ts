@@ -10,6 +10,7 @@ interface AppState {
   // Model state
   modelCode: string | null;
   setModelCode: (code: string | null) => void;
+  modelVersion: number;
   modelHistory: string[];
   pushModelHistory: (code: string) => void;
   undoModel: () => void;
@@ -28,10 +29,10 @@ interface AppState {
   toggleGrid: () => void;
   showAxes: boolean;
   toggleAxes: () => void;
-  autoRotate: boolean;
-  toggleAutoRotate: () => void;
-  backgroundColor: string;
-  setBackgroundColor: (color: string) => void;
+  showRuler: boolean;
+  toggleRuler: () => void;
+  selectedObjectId: string | null;
+  setSelectedObjectId: (id: string | null) => void;
 
   // Loading
   isGenerating: boolean;
@@ -42,8 +43,6 @@ interface AppState {
   // Panels
   showChat: boolean;
   toggleChat: () => void;
-  showEditor: boolean;
-  toggleEditor: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -55,14 +54,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: (localStorage.getItem('gemini_api_key') || '').length > 0,
 
   modelCode: null,
-  setModelCode: (code: string | null) => set({ modelCode: code }),
+  setModelCode: (code: string | null) => set(s => ({ modelCode: code, modelVersion: s.modelVersion + 1 })),
+  modelVersion: 0,
   modelHistory: [],
   pushModelHistory: (code: string) => set(s => ({ modelHistory: [...s.modelHistory, code] })),
   undoModel: () => {
     const { modelHistory } = get();
     if (modelHistory.length > 0) {
       const prev = modelHistory[modelHistory.length - 1];
-      set({ modelCode: prev, modelHistory: modelHistory.slice(0, -1) });
+      set(s => ({ modelCode: prev, modelHistory: modelHistory.slice(0, -1), modelVersion: s.modelVersion + 1 }));
     }
   },
 
@@ -78,10 +78,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleGrid: () => set(s => ({ showGrid: !s.showGrid })),
   showAxes: true,
   toggleAxes: () => set(s => ({ showAxes: !s.showAxes })),
-  autoRotate: false,
-  toggleAutoRotate: () => set(s => ({ autoRotate: !s.autoRotate })),
-  backgroundColor: '#1a1a2e',
-  setBackgroundColor: (color: string) => set({ backgroundColor: color }),
+  showRuler: false,
+  toggleRuler: () => set(s => ({ showRuler: !s.showRuler })),
+  selectedObjectId: null,
+  setSelectedObjectId: (id: string | null) => set({ selectedObjectId: id }),
 
   isGenerating: false,
   setIsGenerating: (v: boolean) => set({ isGenerating: v }),
@@ -90,6 +90,4 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   showChat: true,
   toggleChat: () => set(s => ({ showChat: !s.showChat })),
-  showEditor: false,
-  toggleEditor: () => set(s => ({ showEditor: !s.showEditor })),
 }));

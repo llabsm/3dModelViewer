@@ -33,37 +33,30 @@ Rules:
 - Do NOT reference external files or textures
 - Keep the model centered around origin (0, 0, 0)
 - Use reasonable scale (most objects should fit within -5 to 5 range on each axis)
+- Give each mesh a descriptive name property, e.g. mesh.name = "left_wheel"
 
 Example for a simple house:
 \`\`\`threejs
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xddaa77 });
 const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x884422 });
 
-// Walls
 const walls = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 3), wallMaterial);
+walls.name = "walls";
 walls.position.y = 1;
 scene.add(walls);
 
-// Roof
 const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.5, 4), roofMaterial);
+roof.name = "roof";
 roof.position.y = 2.75;
 roof.rotation.y = Math.PI / 4;
 scene.add(roof);
-
-// Door
-const door = new THREE.Mesh(
-  new THREE.BoxGeometry(0.6, 1.2, 0.05),
-  new THREE.MeshStandardMaterial({ color: 0x553311 })
-);
-door.position.set(0, 0.6, 1.525);
-scene.add(door);
 \`\`\`
 
 If the user asks you to modify an existing model, I will provide the current code. Modify it and return the full updated code.
 
 If the user asks a question that is NOT about 3D modeling, respond normally without a code block.
 
-When describing what you created, be concise — 1-2 sentences max.`;
+IMPORTANT: Keep your text response SHORT — 1-2 sentences max describing what you built/changed. Do NOT include the code in your text explanation.`;
 
 export async function generateModel(
   apiKey: string,
@@ -86,6 +79,12 @@ export async function generateModel(
   let userText = prompt;
   if (currentCode) {
     userText += `\n\nCurrent model code:\n\`\`\`threejs\n${currentCode}\n\`\`\``;
+  }
+  if (imageBase64 && !prompt.trim()) {
+    userText = 'Create a 3D model based on this reference image.';
+    if (currentCode) {
+      userText += `\n\nCurrent model code:\n\`\`\`threejs\n${currentCode}\n\`\`\``;
+    }
   }
   parts.push({ text: userText });
 
@@ -118,18 +117,56 @@ export async function generateModel(
   }
 
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-  // Extract code from ```threejs ... ``` blocks
-  const codeMatch = text.match(/```threejs\n([\s\S]*?)```/);
-  const code = codeMatch ? codeMatch[1].trim() : null;
+  // Gemini can return multiple parts
+  let fullText = '';
+  const responseParts = data.candidates?.[0]?.content?.parts;
+  if (Array.isArray(responseParts)) {
+    for (const part of responseParts) {
+      if (part.text) fullText += part.text;
+    }
+  }
 
-  // Clean text: remove the code block from display text
-  const displayText = text
-    .replace(/```threejs\n[\s\S]*?```/g, '')
+  if (!fullText) {
+    throw new Error('Empty response from Gemini');
+  }
+
+  // Extract code — handle various markdown formats Gemini might use
+  // Matches: ```threejs, ```js, ```javascript, or even just ``` followed by Three.js code
+  let code: string | null = null;
+
+  // Try threejs first
+  const threejsMatch = fullText.match(/```threejs\s*\n([\s\S]*?)```/);
+  if (threejsMatch) {
+    code = threejsMatch[1].trim();
+  }
+
+  // Try js/javascript
+  if (!code) {
+    const jsMatch = fullText.match(/```(?:js|javascript)\s*\n([\s\S]*?)```/);
+    if (jsMatch && jsMatch[1].includes('THREE.')) {
+      code = jsMatch[1].trim();
+    }
+  }
+
+  // Try bare code block that contains THREE
+  if (!code) {
+    const bareMatch = fullText.match(/```\s*\n([\s\S]*?)```/);
+    if (bareMatch && bareMatch[1].includes('THREE.')) {
+      code = bareMatch[1].trim();
+    }
+  }
+
+  // Strip ALL code blocks from display text
+  const displayText = fullText
+    .replace(/```[\w]*\s*\n[\s\S]*?```/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  return { text: displayText || (code ? 'Model updated.' : text), code };
+  return {
+    text: displayText || (code ? 'Model updated.' : fullText),
+    code,
+  };
 }
 
 export async function validateApiKey(apiKey: string): Promise<boolean> {

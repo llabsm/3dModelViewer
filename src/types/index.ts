@@ -1,13 +1,3 @@
-export interface ModelData {
-  id: string;
-  name: string;
-  vertices: Float32Array;
-  indices: Uint32Array;
-  normals: Float32Array;
-  colors?: Float32Array;
-  timestamp: number;
-}
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -17,12 +7,5 @@ export interface ChatMessage {
   modelUpdate?: boolean;
 }
 
-export interface EditorTool {
-  id: string;
-  name: string;
-  icon: string;
-  cursor?: string;
-}
-
 export type ViewMode = 'solid' | 'wireframe' | 'points';
-export type EditorMode = 'view' | 'select' | 'move' | 'rotate' | 'scale';
+export type EditorMode = 'view' | 'move' | 'rotate' | 'scale';

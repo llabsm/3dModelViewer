@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useAppStore } from './stores/useAppStore.ts';
 import { ApiKeyModal } from './components/ApiKeyModal.tsx';
@@ -8,8 +8,34 @@ import { ChatPanel } from './components/ChatPanel.tsx';
 import { exportTo3MF, exportToSTL } from './utils/export3mf.ts';
 
 export default function App() {
-  const { isAuthenticated, showChat } = useAppStore();
+  const { isAuthenticated, showChat, setEditorMode, setSelectedObjectId } = useAppStore();
   const sceneRef = useRef<THREE.Scene | null>(null);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'g':
+          setEditorMode('move');
+          break;
+        case 'r':
+          setEditorMode('rotate');
+          break;
+        case 's':
+          setEditorMode('scale');
+          break;
+        case 'escape':
+          setEditorMode('view');
+          setSelectedObjectId(null);
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [setEditorMode, setSelectedObjectId]);
 
   const handleExport3MF = async () => {
     if (!sceneRef.current) return;
