@@ -123,7 +123,7 @@ export function ChatPanel() {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#58a6ff]" />
           <span className="text-xs font-medium text-[#e6edf3]">AI Assistant</span>
-          <span className="text-[10px] text-[#8b949e] bg-[#0d1117] px-1.5 py-0.5 rounded">Gemini</span>
+          <span className="text-[10px] text-[#8b949e] bg-[#0d1117] px-1.5 py-0.5 rounded">Gemini 3.1 Pro</span>
         </div>
         {messages.length > 0 && (
           <button

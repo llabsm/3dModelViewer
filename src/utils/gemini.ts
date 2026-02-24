@@ -13,50 +13,102 @@ interface GeminiContent {
   parts: GeminiPart[];
 }
 
-const SYSTEM_PROMPT = `You are a 3D modeling assistant. When the user asks you to create or modify a 3D model, respond with valid Three.js geometry code.
+const SYSTEM_PROMPT = `You are a precise 3D modeling assistant that generates Three.js geometry code.
 
-Your response MUST include a code block wrapped in \`\`\`threejs ... \`\`\` tags.
+RESPONSE FORMAT:
+- Always include a code block wrapped in \`\`\`threejs ... \`\`\`
+- Before the code block, write 1 sentence max describing what you made.
+- NEVER include the code in your text explanation.
 
-The code inside must be a JavaScript function body that receives these parameters:
-- THREE: the Three.js library
-- scene: the Three.js scene to add objects to
+CODE REQUIREMENTS:
+The code receives two variables: THREE (the Three.js library) and scene (a THREE.Group to add objects to).
 
-Rules:
-- Use THREE.Mesh, THREE.BoxGeometry, THREE.SphereGeometry, THREE.CylinderGeometry, THREE.ConeGeometry, THREE.TorusGeometry, THREE.TorusKnotGeometry, THREE.PlaneGeometry, etc.
-- Use THREE.MeshStandardMaterial with colors and properties
-- You can use THREE.Group to group objects
-- You can use THREE.Shape and THREE.ExtrudeGeometry for complex shapes
-- You can use THREE.LatheGeometry for rotational shapes
-- Position, rotate, and scale objects as needed
-- ALL objects must be added to the scene via scene.add()
-- Do NOT use imports or require statements
-- Do NOT reference external files or textures
-- Keep the model centered around origin (0, 0, 0)
-- Use reasonable scale (most objects should fit within -5 to 5 range on each axis)
-- Give each mesh a descriptive name property, e.g. mesh.name = "left_wheel"
+GEOMETRY RULES:
+- Use THREE.Shape + THREE.ExtrudeGeometry for letters, logos, and flat shapes that need depth.
+- Use THREE.CylinderGeometry, THREE.SphereGeometry, THREE.BoxGeometry, THREE.ConeGeometry, THREE.TorusGeometry, THREE.TorusKnotGeometry for primitives.
+- Use THREE.LatheGeometry for rotationally symmetric objects (vases, bottles, chess pieces).
+- Use THREE.TubeGeometry + THREE.CatmullRomCurve3 for pipes, tubes, curved paths.
+- Use THREE.BufferGeometry with manual vertices for complex organic shapes.
+- Use THREE.MeshStandardMaterial with color, roughness, metalness.
+- Give every mesh a .name property.
+- Center models around origin (0,0,0). Keep within -5 to 5 range.
+- Add objects via scene.add().
+- Do NOT use imports, require, or external files.
 
-Example for a simple house:
+LETTER / TEXT SHAPES:
+When asked to create a letter or text shape, you MUST draw the actual outline of that letter using THREE.Shape with moveTo/lineTo/quadraticCurveTo/bezierCurveTo, then extrude it. Think carefully about what the letter looks like. For example:
+- "S" is a sinuous curve, not a straight shape. Use bezier curves.
+- "O" is a circle with a hole (use shape.holes).
+- "A" has a triangular top with a crossbar and a hole.
+Trace the outline carefully — imagine drawing the letter on paper, then creating a path that follows its contour.
+
+EXAMPLE — Letter "S":
 \`\`\`threejs
-const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xddaa77 });
-const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x884422 });
+const shape = new THREE.Shape();
+// Draw an S-curve outline
+shape.moveTo(1.2, 0);
+shape.lineTo(0.3, 0);
+shape.quadraticCurveTo(-0.8, 0, -0.8, 0.8);
+shape.quadraticCurveTo(-0.8, 1.6, 0.3, 1.6);
+shape.lineTo(0.5, 1.6);
+shape.quadraticCurveTo(1.2, 1.6, 1.2, 2.3);
+shape.quadraticCurveTo(1.2, 3.0, 0.3, 3.0);
+shape.lineTo(-0.8, 3.0);
+shape.lineTo(-0.8, 2.6);
+shape.lineTo(0.3, 2.6);
+shape.quadraticCurveTo(0.8, 2.6, 0.8, 2.3);
+shape.quadraticCurveTo(0.8, 1.95, 0.3, 1.95);
+shape.lineTo(-0.3, 1.95);
+shape.quadraticCurveTo(-1.2, 1.95, -1.2, 1.15);
+shape.quadraticCurveTo(-1.2, 0.4, -0.3, 0.4);
+shape.lineTo(0.8, 0.4);
+shape.quadraticCurveTo(1.2, 0.4, 1.2, 0);
 
-const walls = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 3), wallMaterial);
-walls.name = "walls";
-walls.position.y = 1;
-scene.add(walls);
-
-const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.5, 4), roofMaterial);
-roof.name = "roof";
-roof.position.y = 2.75;
-roof.rotation.y = Math.PI / 4;
-scene.add(roof);
+const extrudeSettings = { depth: 0.5, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 3 };
+const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+geometry.center();
+const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x4488ff, roughness: 0.3, metalness: 0.6 }));
+mesh.name = "letter_S";
+scene.add(mesh);
 \`\`\`
 
-If the user asks you to modify an existing model, I will provide the current code. Modify it and return the full updated code.
+EXAMPLE — Coffee mug:
+\`\`\`threejs
+// Body via LatheGeometry
+const bodyPoints = [
+  new THREE.Vector2(0, 0),
+  new THREE.Vector2(1.2, 0),
+  new THREE.Vector2(1.3, 0.3),
+  new THREE.Vector2(1.3, 2.5),
+  new THREE.Vector2(1.2, 2.8),
+  new THREE.Vector2(1.1, 2.8),
+  new THREE.Vector2(1.1, 0.3),
+  new THREE.Vector2(1.0, 0.15),
+  new THREE.Vector2(0, 0.15),
+];
+const body = new THREE.Mesh(
+  new THREE.LatheGeometry(bodyPoints, 32),
+  new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.4 })
+);
+body.name = "mug_body";
+scene.add(body);
 
-If the user asks a question that is NOT about 3D modeling, respond normally without a code block.
+// Handle via TubeGeometry
+const handleCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(1.3, 2.2, 0),
+  new THREE.Vector3(2.0, 1.8, 0),
+  new THREE.Vector3(2.0, 1.0, 0),
+  new THREE.Vector3(1.3, 0.6, 0),
+]);
+const handle = new THREE.Mesh(
+  new THREE.TubeGeometry(handleCurve, 20, 0.1, 8, false),
+  new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.4 })
+);
+handle.name = "mug_handle";
+scene.add(handle);
+\`\`\`
 
-IMPORTANT: Keep your text response SHORT — 1-2 sentences max describing what you built/changed. Do NOT include the code in your text explanation.`;
+When modifying an existing model, return the FULL updated code, not just the changed parts.`;
 
 export async function generateModel(
   apiKey: string,
@@ -81,7 +133,7 @@ export async function generateModel(
     userText += `\n\nCurrent model code:\n\`\`\`threejs\n${currentCode}\n\`\`\``;
   }
   if (imageBase64 && !prompt.trim()) {
-    userText = 'Create a 3D model based on this reference image.';
+    userText = 'Create a 3D model based on this reference image. Study the image carefully and reproduce its shape as accurately as possible using Three.js geometry.';
     if (currentCode) {
       userText += `\n\nCurrent model code:\n\`\`\`threejs\n${currentCode}\n\`\`\``;
     }
@@ -94,7 +146,7 @@ export async function generateModel(
   ];
 
   const response = await fetch(
-    `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `${GEMINI_API_BASE}/models/gemini-3.1-pro-preview:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,8 +156,8 @@ export async function generateModel(
         },
         contents,
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
+          temperature: 0.4,
+          maxOutputTokens: 16384,
         },
       }),
     }
@@ -131,19 +183,18 @@ export async function generateModel(
     throw new Error('Empty response from Gemini');
   }
 
-  // Extract code — handle various markdown formats Gemini might use
-  // Matches: ```threejs, ```js, ```javascript, or even just ``` followed by Three.js code
+  // Extract code — handle various markdown formats
   let code: string | null = null;
 
   // Try threejs first
-  const threejsMatch = fullText.match(/```threejs\s*\n([\s\S]*?)```/);
+  const threejsMatch = fullText.match(/```threejs\s*\n?([\s\S]*?)```/);
   if (threejsMatch) {
     code = threejsMatch[1].trim();
   }
 
   // Try js/javascript
   if (!code) {
-    const jsMatch = fullText.match(/```(?:js|javascript)\s*\n([\s\S]*?)```/);
+    const jsMatch = fullText.match(/```(?:js|javascript)\s*\n?([\s\S]*?)```/);
     if (jsMatch && jsMatch[1].includes('THREE.')) {
       code = jsMatch[1].trim();
     }
@@ -151,7 +202,7 @@ export async function generateModel(
 
   // Try bare code block that contains THREE
   if (!code) {
-    const bareMatch = fullText.match(/```\s*\n([\s\S]*?)```/);
+    const bareMatch = fullText.match(/```\s*\n?([\s\S]*?)```/);
     if (bareMatch && bareMatch[1].includes('THREE.')) {
       code = bareMatch[1].trim();
     }
@@ -159,7 +210,7 @@ export async function generateModel(
 
   // Strip ALL code blocks from display text
   const displayText = fullText
-    .replace(/```[\w]*\s*\n[\s\S]*?```/g, '')
+    .replace(/```[\w]*\s*\n?[\s\S]*?```/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
